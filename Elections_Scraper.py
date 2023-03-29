@@ -11,15 +11,17 @@ import sys
 import csv
 
 
-def get_rows(url):
+def get_rows(url: str) -> list:
+    """Function will get all the rows from the table from the url."""
     print(f"I am downloading data from inserted URL: {url}")
     tables = BeautifulSoup(requests.get(url).text, 'html.parser').find_all\
     ("table", {"class": "table"})
     all_rows = [row for table in tables for row in table.find_all("tr")[2:]]
     return all_rows
-    
 
-def get_code_location(all_rows):
+
+def get_code_location(all_rows: list) -> tuple:
+    """Function will get the code and location from the table."""
     code = [row.find_all("td")[0].text for row in all_rows
             if row.find_all("td")[0].text != "-"]
     location = [row.find_all("td")[1].text for row in all_rows
@@ -27,7 +29,8 @@ def get_code_location(all_rows):
     return code, location
 
 
-def tables_detail(all_rows):
+def tables_detail(all_rows: list) -> tuple:
+    """Function will get the district and votes from the table."""
     base_url = "https://www.volby.cz/pls/ps2017nss/"
     tab_district, tab_vote = [], []
     links = [base_url + row.find("a", href=True)["href"] for row in all_rows
@@ -39,7 +42,8 @@ def tables_detail(all_rows):
     return tab_district, tab_vote
 
 
-def get_votes(tab_district):
+def get_votes(tab_district: list) -> tuple:
+    """Function will get the nubers of registered voters, number of envelopes and how many votes were valid from the table."""
     register = [tab.find("td",{"class": "cislo", "data-rel": "L1",
                          "headers": "sa2"}).text.replace("\xa0","") 
                          for tab in tab_district]
@@ -52,7 +56,8 @@ def get_votes(tab_district):
     return register, envelope, valid
 
 
-def get_head(tab_vote):
+def get_head(tab_vote: list) -> list:
+    """Function will get the head of the table."""
     head = [tr.find("td", {"class": "overflow_name"}).text 
             for tr in tab_vote[0].find_all("tr")[2:len(tab_vote[0])]]
     head.extend([tr.find("td", {"class": "overflow_name"}).text 
@@ -60,28 +65,33 @@ def get_head(tab_vote):
     return head
 
 
-def votes_values(rows, class_val, header_val):
-    value = rows.find_all("td", {"class": class_val, "headers": header_val})
-    return [v.text.replace("\xa0", "") for v in value]
-
-def results(tables_vote):
-    result_1 = [votes_values(rows, "cislo", "t1sa2 t1sb3")
-                for rows in tables_vote]
-    result_2 = [votes_values(rows, "cislo", "t2sa2 t2sb3")
-                for rows in tables_vote]
-    list_1 = list(zip(*[r for r in result_1 if r]))
-    list_2 = list(zip(*[r for r in result_2 if r]))
-    final_list = list_1 + list_2
+def results(tab_vote: list) -> list:
+    """Function will return data about numbers of valid votes for individual parties."""
+    result_1 = []
+    result_2 = []
+    for rows in tab_vote:
+        value_1 = rows.find_all("td", {"class": "cislo", "headers": "t1sa2 t1sb3"})
+        value_2 = rows.find_all("td", {"class": "cislo", "headers": "t2sa2 t2sb3"})
+        values_1 = [v.text.replace("\xa0", "") for v in value_1]
+        values_2 = [v.text.replace("\xa0", "") for v in value_2]
+        if values_1:
+            result_1.append(values_1)
+        if values_2:
+            result_2.append(values_2)
+    final_list = list(zip(*result_1)) + list(zip(*result_2))
     return final_list
 
 
-def create_dict(head, final_list):
+def create_dict(head: list, final_list: list) -> dict:
+    """Function will create a dictionary with the name of the parties as key and number of votes as values."""
     dict_vote = {}
     for i, party in enumerate(head):
         dict_vote[party] = final_list[i]
     return dict_vote
 
-def scrape_url(url):
+
+def scrape_url(url: str) -> dict:
+    """Function will scrape the url and return all data needed for output."""
     all_rows = get_rows(url)
     tab_district, tab_vote = tables_detail(all_rows)
     code, location = get_code_location(all_rows)
@@ -92,15 +102,19 @@ def scrape_url(url):
     data_all.update(dict_vote)
     return data_all
 
-def save_to_csv(file_name, data_all):
+
+def save_to_csv(file_name: str, data_all: dict):
+    """Function will save data to CSV file."""
     with open(file_name, mode='w', newline='', encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(data_all.keys())
         writer.writerows(zip(*data_all.values()))
 
+
 def main():
+    """Function will start the program."""
     if len(sys.argv) != 3:
-        print("You must input 3 arguments in to terminal\
+        print("You must input 3 arguments in to the terminal\
 (Name of the main file, URL of the website, Name of final CSV file)")
     else:
         url = sys.argv[1]
