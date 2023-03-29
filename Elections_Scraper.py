@@ -30,7 +30,7 @@ def get_code_location(all_rows: list) -> tuple:
 
 
 def tables_detail(all_rows: list) -> tuple:
-    """Function will get the district and votes from the table."""
+    """Function will scrape sub URL and will get data of two tables."""
     base_url = "https://www.volby.cz/pls/ps2017nss/"
     tab_district, tab_vote = [], []
     links = [base_url + row.find("a", href=True)["href"] for row in all_rows
@@ -43,7 +43,8 @@ def tables_detail(all_rows: list) -> tuple:
 
 
 def get_votes(tab_district: list) -> tuple:
-    """Function will get the nubers of registered voters, number of envelopes and how many votes were valid from the table."""
+    """Function will get the nubers of registered voters, 
+    number of envelopes and how many votes were valid from the first table."""
     register = [tab.find("td",{"class": "cislo", "data-rel": "L1",
                          "headers": "sa2"}).text.replace("\xa0","") 
                          for tab in tab_district]
@@ -57,7 +58,7 @@ def get_votes(tab_district: list) -> tuple:
 
 
 def get_head(tab_vote: list) -> list:
-    """Function will get the head of the table."""
+    """Function will get the head of the second table."""
     head = [tr.find("td", {"class": "overflow_name"}).text 
             for tr in tab_vote[0].find_all("tr")[2:len(tab_vote[0])]]
     head.extend([tr.find("td", {"class": "overflow_name"}).text 
@@ -66,12 +67,15 @@ def get_head(tab_vote: list) -> list:
 
 
 def results(tab_vote: list) -> list:
-    """Function will return data about numbers of valid votes for individual parties."""
+    """Function will return data about numbers of valid votes 
+    for individual parties."""
     result_1 = []
     result_2 = []
     for rows in tab_vote:
-        value_1 = rows.find_all("td", {"class": "cislo", "headers": "t1sa2 t1sb3"})
-        value_2 = rows.find_all("td", {"class": "cislo", "headers": "t2sa2 t2sb3"})
+        value_1 = rows.find_all("td", {"class": "cislo", 
+                                       "headers": "t1sa2 t1sb3"})
+        value_2 = rows.find_all("td", {"class": "cislo", 
+                                       "headers": "t2sa2 t2sb3"})
         values_1 = [v.text.replace("\xa0", "") for v in value_1]
         values_2 = [v.text.replace("\xa0", "") for v in value_2]
         if values_1:
@@ -83,7 +87,8 @@ def results(tab_vote: list) -> list:
 
 
 def create_dict(head: list, final_list: list) -> dict:
-    """Function will create a dictionary with the name of the parties as key and number of votes as values."""
+    """Function will create a dictionary with the name of the parties as keys
+      and numbers of votes as values."""
     dict_vote = {}
     for i, party in enumerate(head):
         dict_vote[party] = final_list[i]
